@@ -28,7 +28,7 @@ set(ASSIMP_DIR assimp-4.1.0)
 set(TINYGLTF_DIR tiny_gltf)
 
 add_subdirectory(third-party/${GLFW_DIR})
-add_subdirectory(third-party/${ASSIMP_DIR})
+#add_subdirectory(third-party/${ASSIMP_DIR})
 
 find_package(OpenGL REQUIRED)
 
@@ -125,7 +125,7 @@ set(
     ${OPENGL_LIBRARIES}
     glfw
     glmlv
-    assimp
+    #assimp
 )
 
 if(CMAKE_COMPILER_IS_GNUCXX AND NOT GLMLV_USE_BOOST_FILESYSTEM)
