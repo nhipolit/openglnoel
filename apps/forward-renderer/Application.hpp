@@ -21,8 +21,7 @@ class Application{
 	    const std::string m_ImGuiIniFilename;
 	    const glmlv::fs::path m_ShadersRootPath;
 
-	    GLuint vaoCube;
-        GLuint vaoSphere;
+	    GLuint vao[2];
         GLuint ibo[2];
         int nbIndexCube;
         int nbIndexSphere;
