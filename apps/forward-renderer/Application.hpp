@@ -5,6 +5,7 @@
 #include <glmlv/GLProgram.hpp>
 #include <glmlv/ViewController.hpp>
 #include <glmlv/simple_geometry.hpp>
+#include <glmlv/Image2DRGBA.hpp>
 
 class Application{
 	public:
@@ -25,4 +26,21 @@ class Application{
         GLuint ibo[2];
         int nbIndexCube;
         int nbIndexSphere;
+
+        glmlv::GLProgram shader;
+        GLuint uMVPMatrix;
+        GLuint uMVMatrix;
+        GLuint uNMatrix;
+
+        GLuint uDirectionLightDir;
+        GLuint uDirectionalLightIntensity;
+        GLuint uPointLightPosition;
+        GLuint uPointLightIntensity;
+        GLuint uKd;
+        GLuint uKdSampler;
+
+        GLuint textCube;
+        GLuint textSphere;
+
+        glmlv::ViewController viewController;
 };

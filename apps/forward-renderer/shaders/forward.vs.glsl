@@ -10,11 +10,11 @@ uniform mat4 uNormalMatrix;
 
 out vec3 vViewSpacePosition;
 out vec3 vViewSpaceNormal;
-out vec3 vTexCoords;
+out vec2 vTexCoords;
 
 void main(){
-	vViewSpacePosition = uModelViewMatrix*aPosition;
-	vViewSpaceNormal = uNormalMatrix*aNormal;
-	vTexCoords = vec3(aTexCoords, 1);
-	gl_Position = uModelViewProjMatrix*aPosition;
+	vViewSpacePosition = vec3(uModelViewMatrix*vec4(aPosition,1)) ;
+	vViewSpaceNormal = vec3(uNormalMatrix*vec4(aNormal,0)) ;
+	vTexCoords = aTexCoords ;
+	gl_Position = uModelViewProjMatrix*vec4(aPosition,1) ;
 };
