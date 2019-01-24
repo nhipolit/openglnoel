@@ -18,7 +18,7 @@ uniform sampler2D uKaSampler;
 uniform sampler2D uKsSampler;
 uniform sampler2D uShininessSampler;
 
-out vec3 fFragNormal;
+out vec3 fColor;
 
 
 void main() {
@@ -34,19 +34,18 @@ void main() {
     vec3 dirToPointLight = (uPointLightPosition - vViewSpacePosition) / distToPointLight;
     vec3 pointLightIncidentLight = uPointLightIntensity / (distToPointLight * distToPointLight);
 
-    // half vectors, for blinn-phong shading
     vec3 hPointLight = normalize(eyeDir + dirToPointLight);
     vec3 hDirLight = normalize(eyeDir + uDirectionLightDir);
 
     float dothPointLight = shininess == 0 ? 1.f : max(0.f, dot(normal, hPointLight));
     float dothDirLight = shininess == 0 ? 1.f : max(0.f, dot(normal, hDirLight));
 
-    if (shininess != 1.f && shininess != 0.f){
+    if(shininess != 1.f && shininess != 0.f){
         dothPointLight = pow(dothPointLight, shininess);
         dothDirLight = pow(dothDirLight, shininess);
     }
 
-    fFragNormal = ka;
-    fFragNormal += kd * (uDirectionalLightIntensity * max(0.f, dot(normal, uDirectionLightDir)) + pointLightIncidentLight * max(0., dot(normal, dirToPointLight)));
-	fFragNormal += ks * (uDirectionalLightIntensity * dothDirLight + pointLightIncidentLight * dothPointLight);
+    fColor = ka;
+    fColor += kd * (uDirectionalLightIntensity * max(0.f, dot(normal, uDirectionLightDir)) + pointLightIncidentLight * max(0., dot(normal, dirToPointLight)));
+	fColor += ks * (uDirectionalLightIntensity * dothDirLight + pointLightIncidentLight * dothPointLight);
 };

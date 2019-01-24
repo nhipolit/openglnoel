@@ -5,11 +5,15 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+static glm::vec3 computeDirectionVector(float phiRadians, float thetaRadians){
+        const auto cosPhi = glm::cos(phiRadians);
+        const auto sinPhi = glm::sin(phiRadians);
+        const auto sinTheta = glm::sin(thetaRadians);
+        return glm::vec3(sinPhi * sinTheta, glm::cos(thetaRadians), cosPhi * sinTheta);
+}
+
 int Application::run(){
 	// Put here code to run before rendering loop
-    glm::vec3 kd;
-    glm::vec3 lightDir;
-    glm::vec3 lightIntensity;
 
     // Loop until the user closes the window
     for (auto iterationCount = 0u; !m_GLFWHandle.shouldClose(); ++iterationCount){
@@ -20,27 +24,30 @@ int Application::run(){
 		glViewport(0, 0, fbSize.x, fbSize.y);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        kd = glm::vec3(1,1,1);
-        lightDir = glm::vec3(0,2,1);
-        lightIntensity = glm::vec3(1,1,1);
+        const auto sceneDiagonalSize = glm::length(scene.bboxMax - scene.bboxMin);
+        viewController.setSpeed(sceneDiagonalSize * 0.1f); 
 
-        glUniform3fv(uKd, 1, glm::value_ptr(kd));
-        glUniform3fv(uDirectionLightDir, 1, glm::value_ptr(lightDir));
-        glUniform3fv(uDirectionalLightIntensity, 1, glm::value_ptr(lightIntensity));
-
-
-        glUniform1i(uKdSampler,0);
-
-        glm::mat4 ProjMatrix = glm::perspective(glm::radians(70.f),(float)fbSize.x/fbSize.y, 0.1f, 2000.f);
+        glm::mat4 ProjMatrix = glm::perspective(70.f, float(fbSize.x) / fbSize.y, 0.01f * sceneDiagonalSize, sceneDiagonalSize);
         glm::mat4 ViewMatrix = viewController.getViewMatrix();
-        glm::mat4 ModelViewMatrix = ViewMatrix * glm::translate(glm::mat4(1.f), glm::vec3(2.5,0,-5));
-        ModelViewMatrix = glm::scale(ModelViewMatrix, glm::vec3(1.55f,1.55f,1.55f));
+        glm::mat4 ModelViewMatrix = ViewMatrix * glm::translate(glm::mat4(1.f), glm::vec3(0,0,-5));
         glm::mat4 NormalMatrix = glm::transpose(glm::inverse(ModelViewMatrix));
         glm::mat4 MVPMatrix = ProjMatrix * ModelViewMatrix;
 
         glUniformMatrix4fv(uMVPMatrix,1,GL_FALSE,glm::value_ptr(MVPMatrix));
         glUniformMatrix4fv(uMVMatrix,1,GL_FALSE,glm::value_ptr(ModelViewMatrix));
         glUniformMatrix4fv(uNMatrix,1,GL_FALSE,glm::value_ptr(NormalMatrix));
+
+        glm::vec3 lightDirection = computeDirectionVector(glm::radians(90.0f), glm::radians(45.0f));
+
+        glUniform3fv(uDirectionLightDir, 1, glm::value_ptr(glm::vec3(ViewMatrix * glm::vec4(glm::normalize(lightDirection), 0))));
+        glUniform3fv(uDirectionalLightIntensity, 1, glm::value_ptr(glm::vec3(1, 1, 1) * 1.0f));
+        glUniform3fv(uPointLightPosition, 1, glm::value_ptr(glm::vec3(ViewMatrix * glm::vec4(glm::vec3(0, 1, 0), 1))));
+        glUniform3fv(uPointLightIntensity, 1, glm::value_ptr(glm::vec3(0, 1, 0) * 5.0f));
+        
+        glUniform1i(uKdSampler,0);
+        glUniform1i(uKaSampler,1);
+        glUniform1i(uKsSampler,2);
+        glUniform1i(uShininessSampler,3);
 
         glBindVertexArray(vao);
             auto indexOffset = 0;
@@ -51,9 +58,37 @@ int Application::run(){
                     glBindTexture(GL_TEXTURE_2D, whiteTextureId);
                 else{
                     const auto& material = scene.materials[scene.materialIDPerShape[shapeIdx]];
-                    auto idTex = material.KdTextureId;
-                    if(idTex!=-1)
-                        glBindTexture(GL_TEXTURE_2D, objectsTextureId[idTex]);
+                    auto idTexKd = material.KdTextureId;
+                    auto idTexKa = material.KaTextureId;
+                    auto idTexKs = material.KsTextureId;
+                    auto idShininess = material.shininessTextureId;
+
+                    glUniform3fv(uKa, 1, glm::value_ptr(material.Ka));
+                    glUniform3fv(uKd, 1, glm::value_ptr(material.Kd));
+                    glUniform3fv(uKs, 1, glm::value_ptr(material.Ks));
+                    glUniform1fv(uShininess, 1, &material.shininess);
+
+                    glActiveTexture(GL_TEXTURE0);
+                    if(idTexKd != -1)
+                        glBindTexture(GL_TEXTURE_2D, objectsTextureId[idTexKd]);
+                    else
+                        glBindTexture(GL_TEXTURE_2D,0);
+                    
+                    glActiveTexture(GL_TEXTURE1);
+                    if(idTexKa != -1)
+                        glBindTexture(GL_TEXTURE_2D, objectsTextureId[idTexKa]);
+                    else
+                        glBindTexture(GL_TEXTURE_2D,0);
+                    
+                    glActiveTexture(GL_TEXTURE2);
+                    if(idTexKs != -1)
+                        glBindTexture(GL_TEXTURE_2D, objectsTextureId[idTexKs]);
+                    else
+                        glBindTexture(GL_TEXTURE_2D,0);
+                    
+                    glActiveTexture(GL_TEXTURE3);
+                    if(idShininess != -1)
+                        glBindTexture(GL_TEXTURE_2D, objectsTextureId[idShininess]);
                     else
                         glBindTexture(GL_TEXTURE_2D,0);
                 }
@@ -112,8 +147,14 @@ Application::Application(int argc, char** argv):
         uPointLightIntensity = shader.getUniformLocation("uPointLightIntensity");
         uKd = shader.getUniformLocation("uKd");
         uKdSampler = shader.getUniformLocation("uKdSampler");
+        uKa = shader.getUniformLocation("uKa");
+        uKaSampler= shader.getUniformLocation("uKaSampler");
+        uKs = shader.getUniformLocation("uKs");
+        uKsSampler = shader.getUniformLocation("uKsSampler");
+        uShininess = shader.getUniformLocation("uShininess");
+        uShininessSampler = shader.getUniformLocation("uShininessSampler");
 
-        loadObjScene("/home/2ins2/nhipolit/Documents/Semestre2/synthese/openglnoel/apps/forward-renderer-obj/assets/sponza/sponza.obj", scene);
+        loadObjScene(argv[1], scene);
         shader.use();
 
         /********************************************/

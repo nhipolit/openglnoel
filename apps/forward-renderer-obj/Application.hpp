@@ -57,6 +57,4 @@ class Application{
         GLuint uKsSampler;
         GLuint uShininess;
         GLuint uShininessSampler;
-
-        
 };
