@@ -1,17 +1,23 @@
 #include "Application.hpp"
 
 #include <iostream>
-
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-int Application::run()
-{
+
+static glm::vec3 computeDirectionVector(float phiRadians, float thetaRadians){
+        const auto cosPhi = glm::cos(phiRadians);
+        const auto sinPhi = glm::sin(phiRadians);
+        const auto sinTheta = glm::sin(thetaRadians);
+        return glm::vec3(sinPhi * sinTheta, glm::cos(thetaRadians), cosPhi * sinTheta);
+}
+
+
+int Application::run(){
 	// Put here code to run before rendering loop
 
     // Loop until the user closes the window
-    for (auto iterationCount = 0u; !m_GLFWHandle.shouldClose(); ++iterationCount)
-    {
+    for (auto iterationCount = 0u; !m_GLFWHandle.shouldClose(); ++iterationCount){
         const auto seconds = glfwGetTime();
 
         // Put here rendering code
@@ -34,7 +40,7 @@ int Application::run()
 
         auto ellapsedTime = glfwGetTime() - seconds;
         auto guiHasFocus = ImGui::GetIO().WantCaptureMouse || ImGui::GetIO().WantCaptureKeyboard;
-        if (!guiHasFocus) {
+        if (!guiHasFocus){
             // Put here code to handle user interactions
         }
 
@@ -45,13 +51,11 @@ int Application::run()
 }
 
 Application::Application(int argc, char** argv):
-    m_AppPath { glmlv::fs::path{ argv[0] } },
-    m_AppName { m_AppPath.stem().string() },
-    m_ImGuiIniFilename { m_AppName + ".imgui.ini" },
-    m_ShadersRootPath { m_AppPath.parent_path() / "shaders" }
-
+    m_AppPath{glmlv::fs::path{argv[0]}},
+    m_AppName{m_AppPath.stem().string()},
+    m_ImGuiIniFilename {m_AppName + ".imgui.ini"},
+    m_ShadersRootPath {m_AppPath.parent_path() / "shaders"}
+    //viewController{m_GLFWHandle.window()}
 {
     ImGui::GetIO().IniFilename = m_ImGuiIniFilename.c_str(); // At exit, ImGUI will store its windows positions in this file
-
-    // Put here initialization code
 }

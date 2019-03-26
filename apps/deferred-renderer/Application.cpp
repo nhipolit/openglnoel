@@ -50,54 +50,61 @@ int Application::run(){
         glUniform1i(uShininessSampler,3);
 
         glBindVertexArray(vao);
-            auto indexOffset = 0;
-            int shapeIdx = 0;
-            for(const auto indexCount: scene.indexCountPerShape){
-                glActiveTexture(GL_TEXTURE0);
-                if(scene.materialIDPerShape[shapeIdx] == -1)
-                    glBindTexture(GL_TEXTURE_2D, whiteTextureId);
-                else{
-                    const auto& material = scene.materials[scene.materialIDPerShape[shapeIdx]];
-                    auto idTexKd = material.KdTextureId;
-                    auto idTexKa = material.KaTextureId;
-                    auto idTexKs = material.KsTextureId;
-                    auto idShininess = material.shininessTextureId;
-
-                    glUniform3fv(uKa, 1, glm::value_ptr(material.Ka));
-                    glUniform3fv(uKd, 1, glm::value_ptr(material.Kd));
-                    glUniform3fv(uKs, 1, glm::value_ptr(material.Ks));
-                    glUniform1fv(uShininess, 1, &material.shininess);
-
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_FBO);
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                auto indexOffset = 0;
+                int shapeIdx = 0;
+                for(const auto indexCount: scene.indexCountPerShape){
                     glActiveTexture(GL_TEXTURE0);
-                    if(idTexKd != -1)
-                        glBindTexture(GL_TEXTURE_2D, objectsTextureId[idTexKd]);
-                    else
-                        glBindTexture(GL_TEXTURE_2D,0);
-                    
-                    glActiveTexture(GL_TEXTURE1);
-                    if(idTexKa != -1)
-                        glBindTexture(GL_TEXTURE_2D, objectsTextureId[idTexKa]);
-                    else
-                        glBindTexture(GL_TEXTURE_2D,0);
-                    
-                    glActiveTexture(GL_TEXTURE2);
-                    if(idTexKs != -1)
-                        glBindTexture(GL_TEXTURE_2D, objectsTextureId[idTexKs]);
-                    else
-                        glBindTexture(GL_TEXTURE_2D,0);
-                    
-                    glActiveTexture(GL_TEXTURE3);
-                    if(idShininess != -1)
-                        glBindTexture(GL_TEXTURE_2D, objectsTextureId[idShininess]);
-                    else
-                        glBindTexture(GL_TEXTURE_2D,0);
+                    if(scene.materialIDPerShape[shapeIdx] == -1)
+                        glBindTexture(GL_TEXTURE_2D, whiteTextureId);
+                    else{
+                        const auto& material = scene.materials[scene.materialIDPerShape[shapeIdx]];
+                        auto idTexKd = material.KdTextureId;
+                        auto idTexKa = material.KaTextureId;
+                        auto idTexKs = material.KsTextureId;
+                        auto idShininess = material.shininessTextureId;
+
+                        glUniform3fv(uKa, 1, glm::value_ptr(material.Ka));
+                        glUniform3fv(uKd, 1, glm::value_ptr(material.Kd));
+                        glUniform3fv(uKs, 1, glm::value_ptr(material.Ks));
+                        glUniform1fv(uShininess, 1, &material.shininess);
+
+                        glActiveTexture(GL_TEXTURE0);
+                        if(idTexKd != -1)
+                            glBindTexture(GL_TEXTURE_2D, objectsTextureId[idTexKd]);
+                        else
+                            glBindTexture(GL_TEXTURE_2D,0);
+                        
+                        glActiveTexture(GL_TEXTURE1);
+                        if(idTexKa != -1)
+                            glBindTexture(GL_TEXTURE_2D, objectsTextureId[idTexKa]);
+                        else
+                            glBindTexture(GL_TEXTURE_2D,0);
+                        
+                        glActiveTexture(GL_TEXTURE2);
+                        if(idTexKs != -1)
+                            glBindTexture(GL_TEXTURE_2D, objectsTextureId[idTexKs]);
+                        else
+                            glBindTexture(GL_TEXTURE_2D,0);
+                        
+                        glActiveTexture(GL_TEXTURE3);
+                        if(idShininess != -1)
+                            glBindTexture(GL_TEXTURE_2D, objectsTextureId[idShininess]);
+                        else
+                            glBindTexture(GL_TEXTURE_2D,0);
+                    }
+                    glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, (const GLvoid*) (indexOffset * sizeof(GLuint)));
+                    indexOffset += indexCount;
+                    shapeIdx++;
                 }
-                glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, (const GLvoid*) (indexOffset * sizeof(GLuint)));
-                indexOffset += indexCount;
-                shapeIdx++;
-            }
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, 0);
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, 0);
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, m_FBO);
+                glReadBuffer(GL_COLOR_ATTACHMENT0 + GDiffuse);
+                glBlitFramebuffer(0, 0, fbSize.x, fbSize.y, 0, 0, fbSize.x, fbSize.y, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
         glBindVertexArray(0);
 
         
@@ -133,8 +140,8 @@ Application::Application(int argc, char** argv):
     m_ShadersRootPath {m_AppPath.parent_path() / "shaders"},
     viewController{m_GLFWHandle.window()}
     {
-        shader = glmlv::compileProgram({m_ShadersRootPath / m_AppName / "forward.vs.glsl",
-            m_ShadersRootPath / m_AppName / "forward.fs.glsl"});
+        shader = glmlv::compileProgram({m_ShadersRootPath / m_AppName / "shadingPass.vs.glsl",
+            m_ShadersRootPath / m_AppName / "shadingPass.fs.glsl"});
         ImGui::GetIO().IniFilename = m_ImGuiIniFilename.c_str(); // At exit, ImGUI will store its windows positions in this file
 
 
@@ -153,6 +160,11 @@ Application::Application(int argc, char** argv):
         uKsSampler = shader.getUniformLocation("uKsSampler");
         uShininess = shader.getUniformLocation("uShininess");
         uShininessSampler = shader.getUniformLocation("uShininessSampler");
+        uGPosition = shader.getUniformLocation("uGPosition");
+        uGNormal = shader.getUniformLocation("uGNormal");
+        uGAmbient = shader.getUniformLocation("uGAmbient");
+        uGDiffuse = shader.getUniformLocation("uGDiffuse");
+        uGlossyShininess = shader.getUniformLocation("uGPosition");
 
         loadObjScene(argv[1], scene);
         shader.use();
@@ -201,6 +213,24 @@ Application::Application(int argc, char** argv):
 
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         glEnable(GL_DEPTH_TEST);
+
+
+        glGenTextures(GBufferTextureCount, m_GBufferTextures);
+        const GLenum m_GBufferTextureFormat[GBufferTextureCount] = { GL_RGB32F, GL_RGB32F, GL_RGB32F, GL_RGB32F, GL_RGBA32F, GL_DEPTH_COMPONENT32F };
+        glGenFramebuffers(1, &m_FBO);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_FBO);
+            for(int32_t i = GPosition ; i <= GGlossyShininess ; i++){
+                glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, m_GBufferTextures[i], 0);
+            }
+            glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_GBufferTextures[GDepth], 0);
+            GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4 };
+            glDrawBuffers(5, drawBuffers);
+            GLenum status = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
+            if(status != GL_FRAMEBUFFER_COMPLETE) {
+                std::cerr << "FB error, status: " << status << std::endl;
+                throw std::runtime_error("FBO error");
+            }
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 
 
         glGenTextures(1, &whiteTextureId);

@@ -18,10 +18,15 @@ uniform sampler2D uKaSampler;
 uniform sampler2D uKsSampler;
 uniform sampler2D uShininessSampler;
 
-out vec3 fColor;
+layout(location = 0) out vec3 fPosition;
+layout(location = 1) out vec3 fNormal;
+layout(location = 2) out vec3 fAmbient;
+layout(location = 3) out vec3 fDiffuse;
+layout(location = 4) out vec4 fGlossyShininess;
 
 
 void main() {
+    /*
 	vec3 ka = uKa * vec3(texture(uKaSampler, vTexCoords));
     vec3 kd = uKd * vec3(texture(uKdSampler, vTexCoords));
     vec3 ks = uKs * vec3(texture(uKsSampler, vTexCoords));
@@ -48,4 +53,12 @@ void main() {
     fColor = ka;
     fColor += kd * (uDirectionalLightIntensity * max(0.f, dot(normal, uDirectionLightDir)) + pointLightIncidentLight * max(0., dot(normal, dirToPointLight)));
 	fColor += ks * (uDirectionalLightIntensity * dothDirLight + pointLightIncidentLight * dothPointLight);
-};
+    */
+
+
+    fPosition = vViewSpacePosition;
+    fNormal = normalize(vViewSpaceNormal);
+    fAmbient = texture(uKaSampler, vTexCoords).rgb * uKa;
+    fDiffuse = texture(uKdSampler, vTexCoords).rgb * uKd;
+    fGlossyShininess = vec4(texture(uKsSampler, vTexCoords).rgb * uKs, uShininess);
+}

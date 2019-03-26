@@ -15,12 +15,25 @@ class Application{
 	    int run();
 
 	private:
-            struct SceneObject{
-                uint32_t nbVertices;
-                uint32_t indexFirstVertex;
-                int localMatrixIndex;
-                int32_t materialIndex = -1;
-            };
+        struct SceneObject{
+            uint32_t nbVertices;
+            uint32_t indexFirstVertex;
+            int localMatrixIndex;
+            int32_t materialIndex = -1;
+        };
+
+        enum GBufferTextureType{
+            GPosition = 0,
+            GNormal,
+            GAmbient,
+            GDiffuse,
+            GGlossyShininess,
+            GDepth, // On doit créer une texture de depth mais on écrit pas directement dedans dans le FS. OpenGL le fait pour nous (et l'utilise).
+            GBufferTextureCount
+        };
+        GLuint m_GBufferTextures[GBufferTextureCount];
+
+
 	    const size_t m_nWindowWidth = 1280;
 	    const size_t m_nWindowHeight = 720;
 	    glmlv::GLFWHandle m_GLFWHandle{m_nWindowWidth, m_nWindowHeight, "Template"}; // Note: the handle must be declared before the creation of any object managing OpenGL resource (e.g. GLProgram, GLShader)
@@ -58,5 +71,11 @@ class Application{
         GLuint uShininess;
         GLuint uShininessSampler;
 
-        
+        GLuint m_FBO;
+
+        GLuint uGPosition;
+        GLuint uGNormal;
+        GLuint uGAmbient;
+        GLuint uGDiffuse;
+        GLuint uGlossyShininess;
 };
