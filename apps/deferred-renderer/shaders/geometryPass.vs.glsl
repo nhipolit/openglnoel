@@ -1,20 +1,25 @@
 #version 330 core
 
-layout(location = 0) in vec3 aPosition;
-layout(location = 1) in vec3 aNormal;
-layout(location = 2) in vec2 aTexCoords;
+layout(location = 0) in vec3 aVertexPosition;
+layout(location = 1) in vec3 aVertexNormal;
+layout(location = 2) in vec2 aVertexTex;
 
-uniform mat4 uModelViewProjMatrix;
-uniform mat4 uModelViewMatrix;
+uniform mat4 uMVPMatrix;
+uniform mat4 uMVMatrix;
 uniform mat4 uNormalMatrix;
 
-out vec3 vViewSpacePosition;
-out vec3 vViewSpaceNormal;
-out vec2 vTexCoords;
+out vec3 vFragPositionVS;
+out vec3 vFragNormalVS;
+out vec2 vFragTex;
+
 
 void main(){
-	vViewSpacePosition = vec3(uModelViewMatrix*vec4(aPosition,1)) ;
-	vViewSpaceNormal = vec3(uNormalMatrix*vec4(aNormal,0)) ;
-	vTexCoords = aTexCoords ;
-	gl_Position = uModelViewProjMatrix*vec4(aPosition,1) ;
+    vec4 vertexPosition = vec4(aVertexPosition,1);
+    vec4 vertexNormal = vec4(aVertexNormal,0);
+    
+    vFragTex = aVertexTex;
+    vFragPositionVS = vec3(uMVMatrix * vertexPosition);
+    vFragNormalVS = vec3(uNormalMatrix * vertexNormal);
+    
+    gl_Position = uMVPMatrix * vertexPosition;
 }

@@ -41,5 +41,5 @@ void main(){
 	vec3 Ka = vec3(texelFetch(uGAmbient, ivec2(gl_FragCoord.xy), 0)); 
 
 	fFragColor = blinnPhong(normalize(normal), uDirectionalLightIntensity, normalize(-position), uDirectionalLightDir) +
-				 blinnPhong(normalize(normal), uPointLightIntensity / (distToPointLight * distToPointLight), normalize(-position), dirToPointLight)+Ka;
+				blinnPhong(normalize(normal), uPointLightIntensity / (distToPointLight * distToPointLight), normalize(-position), dirToPointLight)+Ka;
 }
