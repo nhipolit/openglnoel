@@ -1,53 +1,28 @@
-#include <cassert>
-#include <cmath>
-#include <cstdio>
-#include <cstdlib>
-#include <iostream>
-#include <limits>
-#include <string>
-#include <vector>
-
-#include <GL/glew.h>
-
-#define GLFW_INCLUDE_GLU
-#include "glfw3.h"
-
-#define TINYGLTF_IMPLEMENTATION
-#define STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-
-
-#include "tiny_gltf.h"
-//#include "trackball.h"
-
-#define BUFFER_OFFSET(i) ((char *)NULL + (i))
-
-using namespace tinygltf;
-
+#include "Application.hpp"
 
 typedef struct {
-  	GLuint vb;
-} GLBufferState;
+        GLuint vb;
+    } GLBufferState;
 
-typedef struct {
-  	std::vector<GLuint> diffuseTex;  // for each primitive in mesh
-} GLMeshState;
+    typedef struct {
+        std::vector<GLuint> diffuseTex;  // for each primitive in mesh
+    } GLMeshState;
 
-typedef struct {
-  GLuint vb;     // vertex buffer
-  size_t count;  // byte count
-} GLCurvesState;
+    typedef struct {
+      GLuint vb;     // vertex buffer
+      size_t count;  // byte count
+    } GLCurvesState;
 
-typedef struct {
-  std::map<std::string, GLint> attribs;
-  std::map<std::string, GLint> uniforms;
-} GLProgramState;
+    typedef struct {
+      std::map<std::string, GLint> attribs;
+      std::map<std::string, GLint> uniforms;
+    } GLProgramState;
 
 
-std::map<int, GLBufferState> gBufferState;
-std::map<std::string, GLMeshState> gMeshState;
-std::map<int, GLCurvesState> gCurvesMesh;
-GLProgramState gGLProgramState;
+    std::map<int, GLBufferState> gBufferState;
+    std::map<std::string, GLMeshState> gMeshState;
+    std::map<int, GLCurvesState> gCurvesMesh;
+    GLProgramState gGLProgramState;
 
 
 
@@ -93,11 +68,6 @@ static void SetupMeshState(tinygltf::Model &model, GLuint progId) {
         	const auto &accessor = model.accessors[a_i];
         	if (accessor.bufferView == i) {
 	          	std::cout << i << " is used by accessor " << a_i << std::endl;
-	          	if (accessor.sparse.isSparse) {
-	            	std::cout << "WARN: this bufferView has at least one sparse accessor to it. We are going to load the data as patched by this sparse accessor, not the original data" << std::endl;
-	            	sparse_accessor = a_i;
-	            	break;
-	          	}
         	}
       	}
 
@@ -118,63 +88,6 @@ static void SetupMeshState(tinygltf::Model &model, GLuint progId) {
 
 	        const size_t size_of_object_in_buffer =
 	            ComponentTypeByteSize(accessor.componentType);
-	        const size_t size_of_sparse_indices =
-	            ComponentTypeByteSize(accessor.sparse.indices.componentType);
-
-	        const auto &indices_buffer_view =
-	            model.bufferViews[accessor.sparse.indices.bufferView];
-	        const auto &indices_buffer = model.buffers[indices_buffer_view.buffer];
-
-	        const auto &values_buffer_view =
-	            model.bufferViews[accessor.sparse.values.bufferView];
-	        const auto &values_buffer = model.buffers[values_buffer_view.buffer];
-
-	        for (size_t sparse_index = 0 ; sparse_index < accessor.sparse.count ; ++sparse_index) {
-	          	int index = 0;
-	          	// std::cout << "accessor.sparse.indices.componentType = " <<
-	          	// accessor.sparse.indices.componentType << std::endl;
-	          	switch (accessor.sparse.indices.componentType) {
-	            	case TINYGLTF_COMPONENT_TYPE_BYTE:
-	            	case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-	              		index = (int)*(unsigned char *)
-	              						(indices_buffer.data.data() +
-	                                   	indices_buffer_view.byteOffset +
-	                                   	accessor.sparse.indices.byteOffset +
-	                                   	(sparse_index * size_of_sparse_indices));
-	              		break;
-	            	case TINYGLTF_COMPONENT_TYPE_SHORT:
-	            	case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-	              		index = (int)*(unsigned short *)
-	              						(indices_buffer.data.data() +
-	                                    indices_buffer_view.byteOffset +
-	                                    accessor.sparse.indices.byteOffset +
-	                                    (sparse_index * size_of_sparse_indices));
-	              		break;
-	            	case TINYGLTF_COMPONENT_TYPE_INT:
-	            	case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-	              		index = (int)*(unsigned int *)
-	              						(indices_buffer.data.data() +
-	                                  	indices_buffer_view.byteOffset +
-	                                  	accessor.sparse.indices.byteOffset +
-	                                  	(sparse_index * size_of_sparse_indices));
-	              	break;
-          		}
-          		std::cout << "updating sparse data at index  : " << index << std::endl;
-          		// index is now the target of the sparse index to patch in
-          		const unsigned char *read_from = values_buffer.data.data() +
-              									(values_buffer_view.byteOffset +
-               									accessor.sparse.values.byteOffset) +
-              									(sparse_index * (size_of_object_in_buffer * accessor.type));
-
-		        /*
-		        std::cout << ((float*)read_from)[0] << "\n";
-		        std::cout << ((float*)read_from)[1] << "\n";
-		        std::cout << ((float*)read_from)[2] << "\n";
-		        */
-
-          		unsigned char *write_to = tmp_buffer + index * (size_of_object_in_buffer * accessor.type);
-          		memcpy(write_to, read_from, size_of_object_in_buffer * accessor.type);
-        	}
 
 	        // debug:
 	        /*for(size_t p = 0; p < bufferView.byteLength/sizeof(float); p++)
@@ -420,9 +333,119 @@ bool LinkShader(GLuint &prog, GLuint &vertShader, GLuint &fragShader) {
 
 
 /*--------------------------------------------------------------------------*/
+int Application::run(){
+  /*
+  for(const auto &meshe : model.meshes) {
+        for(const auto &primitive : meshe.primitives) {
+
+            const auto &indicesAccessor = model.accessors[primitive.indices];
+
+            std::unique_ptr<intArrayBase> indicesArrayPtr;
+            const auto &buffer = mParent.model.buffers[bufferView.buffer];
+      const auto dataAddress = buffer.data.data() + bufferView.byteOffset + indicesAccessor.byteOffset;
+      const auto byteStride = indicesAccessor.ByteStride(bufferView);
+      const auto count = indicesAccessor.count;
+
+      switch (indicesAccessor.componentType){
+            case TINYGLTF_COMPONENT_TYPE_BYTE:
+                indicesArrayPtr = std::unique_ptr<intArray<char> >(new intArray<char>(arrayAdapter<char>(dataAddress, count, byteStride)));
+                break;
+
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+                indicesArrayPtr = std::unique_ptr<intArray<unsigned char> >(new intArray<unsigned char>(arrayAdapter<unsigned char>(dataAddress, count, byteStride)));
+                break;
+
+            case TINYGLTF_COMPONENT_TYPE_SHORT:
+                indicesArrayPtr = std::unique_ptr<intArray<short> >(new intArray<short>(arrayAdapter<short>(dataAddress, count, byteStride)));
+                break;
+
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                indicesArrayPtr = std::unique_ptr<intArray<unsigned short> >(new intArray<unsigned short>(arrayAdapter<unsigned short>(dataAddress, count, byteStride)));
+                break;
+
+            case TINYGLTF_COMPONENT_TYPE_INT:
+                indicesArrayPtr = std::unique_ptr<intArray<int> >(new intArray<int>(arrayAdapter<int>(dataAddress, count, byteStride)));
+                break;
+
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+                indicesArrayPtr = std::unique_ptr<intArray<unsigned int> >(new intArray<unsigned int>(arrayAdapter<unsigned int>(dataAddress, count, byteStride)));
+                break;
+            default:
+                break;
+      }
+
+      const auto &indices = *indicesArrayPtr;
+      Mesh<float> loadedMesh;
+
+      if (indicesArrayPtr){
+            // std::cout << "indices: ";
+            for (size_t i(0); i < indicesArrayPtr->size(); ++i) {
+                // std::cout << indices[i] << " ";
+                loadedMesh.faces.push_back(indices[i]);
+            }
+            // std::cout << '\n';
+      }
 
 
-int main(int argc, char* argv[]){
+      switch (accessor.type) {
+        case TINYGLTF_TYPE_VEC3:
+              switch (accessor.componentType) {
+                  case TINYGLTF_COMPONENT_TYPE_FLOAT:
+                    v3fArray positions(arrayAdapter<v3f>(dataPtr, count, byte_stride));
+                    for (size_t i{0}; i < positions.size(); ++i) {
+                        const auto v = positions[i];
+                        // std::cout << "positions[" << i << "]: (" << v.x << ", " << v.y << ", " << v.z << ")\n";
+
+                        loadedMesh.vertices.push_back(v.x * scale);
+                        loadedMesh.vertices.push_back(v.y * scale);
+                        loadedMesh.vertices.push_back(v.z * scale);
+                    }
+                    break;
+                  case TINYGLTF_COMPONENT_TYPE_DOUBLE:
+                    v3dArray positions(arrayAdapter<v3d>(dataPtr, count, byte_stride));
+                    for (size_t i{0}; i < positions.size(); ++i) {
+                          const auto v = positions[i];
+                          // std::cout << "positions[" << i << "]: (" << v.x << ", " << v.y << ", " << v.z << ")\n";
+
+                          loadedMesh.vertices.push_back(v.x * scale);
+                          loadedMesh.vertices.push_back(v.y * scale);
+                          loadedMesh.vertices.push_back(v.z * scale);
+                      }
+                    break;
+                  default :
+                    break;
+              }
+            break;
+          default:
+            break;
+      }
+
+      for (const auto &attribute : primitive.attributes) {
+        const auto attribAccessor = model.accessors[attribute.second];
+        
+        const auto &bufferView = model.bufferViews[attribAccessor.bufferView];
+        const auto &buffer = model.buffers[bufferView.buffer];
+        const auto dataPtr = buffer.data.data() + bufferView.byteOffset + attribAccessor.byteOffset;
+        const auto byte_stride = attribAccessor.ByteStride(bufferView);
+        const auto count = attribAccessor.count;
+
+        if(attribute.first == "POSITION") {
+
+        }
+        if(attribute.first == "TEXCOORD_0") {
+
+        }
+        if(attribute.first == "NORMAL") {
+
+        }
+      }
+        }
+    }*/
+  return 0;
+}
+
+
+Application::Application(int argc, char** argv){
 	Model model;
 	TinyGLTF loader;
 	std::string err;
@@ -439,118 +462,8 @@ int main(int argc, char* argv[]){
 
 	if(!ret) {
 	  	printf("Failed to parse glTF\n");
-	  	return -1;
+	  	exit(EXIT_FAILURE);
 	}
 
 	printf("Loading complete\n");
-
-	/*
-	for(const auto &meshe : model.meshes) {
-        for(const auto &primitive : meshe.primitives) {
-
-            const auto &indicesAccessor = model.accessors[primitive.indices];
-
-            std::unique_ptr<intArrayBase> indicesArrayPtr;
-            const auto &buffer = mParent.model.buffers[bufferView.buffer];
-			const auto dataAddress = buffer.data.data() + bufferView.byteOffset + indicesAccessor.byteOffset;
-			const auto byteStride = indicesAccessor.ByteStride(bufferView);
-			const auto count = indicesAccessor.count;
-
-			switch (indicesAccessor.componentType){
-		        case TINYGLTF_COMPONENT_TYPE_BYTE:
-		            indicesArrayPtr = std::unique_ptr<intArray<char> >(new intArray<char>(arrayAdapter<char>(dataAddress, count, byteStride)));
-		            break;
-
-		        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-		            indicesArrayPtr = std::unique_ptr<intArray<unsigned char> >(new intArray<unsigned char>(arrayAdapter<unsigned char>(dataAddress, count, byteStride)));
-		            break;
-
-		        case TINYGLTF_COMPONENT_TYPE_SHORT:
-		            indicesArrayPtr = std::unique_ptr<intArray<short> >(new intArray<short>(arrayAdapter<short>(dataAddress, count, byteStride)));
-		            break;
-
-		        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-		            indicesArrayPtr = std::unique_ptr<intArray<unsigned short> >(new intArray<unsigned short>(arrayAdapter<unsigned short>(dataAddress, count, byteStride)));
-		            break;
-
-		        case TINYGLTF_COMPONENT_TYPE_INT:
-		            indicesArrayPtr = std::unique_ptr<intArray<int> >(new intArray<int>(arrayAdapter<int>(dataAddress, count, byteStride)));
-		            break;
-
-		        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-		            indicesArrayPtr = std::unique_ptr<intArray<unsigned int> >(new intArray<unsigned int>(arrayAdapter<unsigned int>(dataAddress, count, byteStride)));
-		            break;
-		        default:
-	            	break;
-			}
-
-			const auto &indices = *indicesArrayPtr;
-			Mesh<float> loadedMesh;
-
-			if (indicesArrayPtr){
-        		// std::cout << "indices: ";
-        		for (size_t i(0); i < indicesArrayPtr->size(); ++i) {
-          			// std::cout << indices[i] << " ";
-          			loadedMesh.faces.push_back(indices[i]);
-        		}
-        		// std::cout << '\n';
-			}
-
-
-			switch (accessor.type) {
-				case TINYGLTF_TYPE_VEC3:
-			        switch (accessor.componentType) {
-			            case TINYGLTF_COMPONENT_TYPE_FLOAT:
-			            	v3fArray positions(arrayAdapter<v3f>(dataPtr, count, byte_stride));
-			            	for (size_t i{0}; i < positions.size(); ++i) {
-	                			const auto v = positions[i];
-	                			// std::cout << "positions[" << i << "]: (" << v.x << ", " << v.y << ", " << v.z << ")\n";
-
-	                			loadedMesh.vertices.push_back(v.x * scale);
-	                			loadedMesh.vertices.push_back(v.y * scale);
-	                			loadedMesh.vertices.push_back(v.z * scale);
-	            			}
-			            	break;
-			            case TINYGLTF_COMPONENT_TYPE_DOUBLE:
-			            	v3dArray positions(arrayAdapter<v3d>(dataPtr, count, byte_stride));
-			           		for (size_t i{0}; i < positions.size(); ++i) {
-			                    const auto v = positions[i];
-			                    // std::cout << "positions[" << i << "]: (" << v.x << ", " << v.y << ", " << v.z << ")\n";
-
-			                    loadedMesh.vertices.push_back(v.x * scale);
-			                    loadedMesh.vertices.push_back(v.y * scale);
-			                    loadedMesh.vertices.push_back(v.z * scale);
-			                }
-			            	break;
-			            default :
-			            	break;
-			        }
-			    	break;
-			    default:
-			    	break;
-			}
-
-			for (const auto &attribute : primitive.attributes) {
-				const auto attribAccessor = model.accessors[attribute.second];
-				
-				const auto &bufferView = model.bufferViews[attribAccessor.bufferView];
-				const auto &buffer = model.buffers[bufferView.buffer];
-				const auto dataPtr = buffer.data.data() + bufferView.byteOffset + attribAccessor.byteOffset;
-				const auto byte_stride = attribAccessor.ByteStride(bufferView);
-				const auto count = attribAccessor.count;
-
-				if(attribute.first == "POSITION") {
-
-				}
-			 	if(attribute.first == "TEXCOORD_0") {
-
-			 	}
-			 	if(attribute.first == "NORMAL") {
-
-			 	}
-			}
-        }
-    }*/
-
-	return 0 ;
 }

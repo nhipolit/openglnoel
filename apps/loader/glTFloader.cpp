@@ -30,14 +30,13 @@ int main(int argc, char* argv[]){
 
 	printf("Loading complete\n");
 
-
+	/*
 	for(const auto &meshe : model.meshes) {
         for(const auto &primitive : meshe.primitives) {
-        	/* VAO */
             const auto &indicesAccessor = model.accessors[primitive.indices];
 
             std::unique_ptr<intArrayBase> indicesArrayPtr;
-            const auto &buffer = mParent.model.buffers[bufferView.buffer];
+            const auto &buffer = model.buffers[bufferView.buffer];
 			const auto dataAddress = buffer.data.data() + bufferView.byteOffset + indicesAccessor.byteOffset;
 			const auto byteStride = indicesAccessor.ByteStride(bufferView);
 			const auto count = indicesAccessor.count;
@@ -136,7 +135,7 @@ int main(int argc, char* argv[]){
 			 	}
 			}
         }
-    }
+    }*/
 
 	return 0 ;
 }
